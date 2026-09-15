@@ -1,0 +1,4 @@
+pandas==2.3.3
+sqlalchemy==2.0.52
+pytest==9.1.1
+pyspark==4.2.0
