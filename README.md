@@ -1,36 +1,34 @@
-# Campaign Data Pipeline
+# Credit Risk Data Pipeline
 
-A local, end-to-end ETL pipeline that extracts, validates, transforms, and loads marketing campaign data — built to mirror how a real AWS-based campaign analytics pipeline (Glue, Lambda, Step Functions) is structured, using free, local-equivalent tools.
+A local, end-to-end ETL pipeline that extracts, validates, transforms, and loads loan applicant data — built to demonstrate the kind of Python/SQL data pipeline work used in a regulated banking/rating environment.
 
 ## Why this project exists
 
-This project was built to demonstrate the specific skills listed in a **Data Engineer — Campaign & Analytics** job posting (Python pipelines, SQL, data quality/monitoring, Git/CI-CD, and AWS Glue/Lambda/Step Functions/Spark), using a public dataset that mirrors a telecom/marketing campaign use case, without needing paid AWS resources.
+This project demonstrates skills relevant to data engineering roles in banking/risk-analytics contexts: Python pipeline development, SQL, data quality checks and monitoring, workflow orchestration, testing, and CI/CD — using a public credit-risk dataset instead of confidential banking data.
 
 ## Dataset
 
-[Kaggle "Marketing Campaign" dataset](https://www.kaggle.com/datasets/rodsaldanha/arketing-campaign) — customer demographics and their response to past marketing campaigns.
+[German Credit Risk dataset](https://www.kaggle.com/datasets/uciml/german-credit) (Statlog/UCI) — 1,000 loan applicants with features like age, job, housing status, savings/checking account status, credit amount, duration, and loan purpose.
 
 Not committed to this repo (kept out of version control on purpose). To run the pipeline:
 1. Download the dataset from the link above
-2. Place `marketing_campaign.csv` in the `data/` folder
+2. Place `german_credit_data.csv` in the `data/` folder
 
 ## Pipeline stages
 
-Each script represents one stage, structured to map directly onto its AWS-managed equivalent:
-
-| Script | What it does | AWS equivalent |
-|---|---|---|
-| `extract.py` | Loads the raw CSV into a DataFrame | Lambda (event-driven extraction) |
-| `quality_checks.py` | Validates data: missing values, duplicates, out-of-range income — logs pass/fail per check | Glue Data Quality / monitoring & alerting |
-| `transform.py` | Feature engineering (total spend, total campaigns accepted) and segment-level aggregation, using **PySpark** — the same engine Glue runs on under the hood | Glue ETL job |
-| `load.py` | Writes results into a local SQL (SQLite) database | Data warehouse layer |
-| `orchestrator.py` | Runs all stages in order, logs each step, and continues with a warning if quality checks fail rather than hard-blocking | Step Functions state machine |
+| Script | What it does |
+|---|---|
+| `extract.py` | Loads the raw CSV into a DataFrame |
+| `quality_checks.py` | Validates data: missing values (a real, common issue in this dataset — ~39% of applicants have no recorded checking account), duplicate applicant records, and out-of-range credit amounts — logs pass/fail per check |
+| `transform.py` | Feature engineering (estimated monthly payment = credit amount ÷ duration) and segment-level analysis, using **PySpark** — the same engine behind managed Spark/ETL services like AWS Glue or Databricks | 
+| `load.py` | Writes results into a local SQL (SQLite) database |
+| `orchestrator.py` | Runs all stages in order, logs each step, and continues with a warning if quality checks fail rather than hard-blocking — mirroring how a workflow orchestrator (e.g. Airflow, Step Functions) would sequence and monitor a real pipeline |
 
 ## Design decisions worth noting
 
-- **Quality gate is a soft warning, not a hard block.** The real dataset has genuine issues (missing income values, one outlier) — the pipeline flags them clearly and continues rather than halting entirely, a deliberate choice reflecting how many real pipelines treat minor data quality issues.
-- **PySpark, not just pandas, for transformation.** AWS Glue ETL jobs run on Apache Spark — using PySpark here means the transform logic is genuinely transferable to a real Glue job, not just an analogy.
-- **AWS services (Glue/Lambda/Step Functions) are simulated locally**, not deployed to real AWS, to keep this project free to build and run. The code is structured so each script maps cleanly onto its AWS equivalent if it were deployed.
+- **Quality gate is a soft warning, not a hard block.** Real applicant data has genuine gaps (missing account info) — the pipeline flags them clearly and continues rather than halting entirely, reflecting how many real pipelines triage minor data quality issues rather than stopping everything.
+- **PySpark, not just pandas, for transformation.** Managed ETL/Spark services in the cloud (AWS Glue, Databricks) run on Apache Spark — using PySpark here means the transform logic is genuinely transferable, not just an analogy.
+- **No ground-truth risk label used.** This version of the dataset doesn't include a "good/bad credit" outcome column — so instead of just reading a label, the pipeline builds its own simple derived risk indicator (`MonthlyPayment`) and segment-level analysis, which is closer to the kind of feature-engineering work a rating/risk system actually requires.
 
 ## Tech stack
 
@@ -44,7 +42,7 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-Download the dataset (see [Dataset](#dataset) above) into `data/marketing_campaign.csv`.
+Download the dataset (see [Dataset](#dataset) above) into `data/german_credit_data.csv`.
 
 ## Running the pipeline
 
@@ -66,12 +64,15 @@ Every push to `main` automatically runs the test suite via GitHub Actions (`.git
 
 ## Sample result
 
-Campaign acceptance rate by education level (from `get_campaign_performance_by_segment`):
+Average credit amount by loan purpose (from `get_credit_profile_by_purpose`):
 
-| Education | Avg. campaigns accepted |
+| Purpose | Avg. credit amount (€) |
 |---|---|
-| PhD | 33.7% |
-| Graduation | 30.4% |
-| Master | 27.8% |
-| 2n Cycle | 25.1% |
-| Basic | 11.1% |
+| vacation/others | 8,209 |
+| business | 4,158 |
+| car | 3,768 |
+| furniture/equipment | 3,067 |
+| education | 2,879 |
+| repairs | 2,728 |
+| radio/TV | 2,488 |
+| domestic appliances | 1,498 |

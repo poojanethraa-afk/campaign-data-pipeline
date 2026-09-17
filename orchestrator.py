@@ -1,6 +1,6 @@
 from extract import extract_data
 from quality_checks import run_quality_checks
-from transform import transform_data, get_campaign_performance_by_segment
+from transform import transform_data, get_credit_profile_by_purpose
 from load import load_data
 
 def run_pipeline():
@@ -14,8 +14,8 @@ def run_pipeline():
     transformed_df = transform_data(raw_df)
     print("STEP 4: Load")
     load_data(transformed_df, "customers")
-    performance_df = get_campaign_performance_by_segment(transformed_df)
-    load_data(performance_df, "campaign_performance_by_education")
+    performance_df = get_credit_profile_by_purpose(transformed_df)
+    load_data(performance_df, "credit_profile_by_purpose")
 
 if __name__ == "__main__":
     run_pipeline()
